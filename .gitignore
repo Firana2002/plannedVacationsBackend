@@ -1,0 +1,28 @@
+# .NET
+bin/
+obj/
+*.user
+*.suo
+*.sln.ide
+*.vs/
+*.vscode/
+*.db
+*.db-journal
+
+# Папки с зависимостями
+packages/
+project.lock.json
+project.fragment.lock.json
+*.nupkg
+
+# Логи
+*.log
+
+# Конфиденциальные файлы
+appsettings.Development.json
+appsettings.Production.json
+
+# dotnet ef database update 0
+# dotnet ef database drop
+# dotnet ef migrations add InitialCreate
+# dotnet ef database update
