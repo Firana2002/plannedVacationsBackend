@@ -4,6 +4,7 @@ using VacationPlanner.Api.Models;
 using Microsoft.AspNetCore.Authorization;
 using BCrypt.Net;
 using VacationPlanner.Api.Dtos;
+using VacationPlanner.Api.DTOs;
 using VacationPlanner.Api.Utils;
 using System.ComponentModel.DataAnnotations; 
 namespace VacationPlanner.Api.Controllers
@@ -24,16 +25,55 @@ namespace VacationPlanner.Api.Controllers
 
         // GET: api/Employees
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Employee>>> GetEmployees()
+public async Task<ActionResult<IEnumerable<EmployeesDto>>> GetEmployees()
+{
+    var departmentClaim = User.FindFirst("DepartmentId");
+    if (departmentClaim == null || !int.TryParse(departmentClaim.Value, out int userDepartmentId))
+    {
+        return Unauthorized();
+    }
+    
+    return await _context.Employees
+        .Where(e => e.DepartmentId == userDepartmentId)
+        .Include(e => e.Department)
+        .Include(e => e.Position)
+        .Include(e => e.Role)
+        .Select(e => new EmployeesDto 
         {
-            var userDepartmentId = int.Parse(User.FindFirst("DepartmentId")?.Value);
-            return await _context.Employees
-                .Where(e => e.DepartmentId == userDepartmentId) // Фильтр по отделу
-                .Include(e => e.Department)
-                .Include(e => e.Position)
-                .Include(e => e.Role)
-                .ToListAsync();
-        }
+            EmployeeId = e.EmployeeId,
+            DepartmentId = e.DepartmentId,
+            PositionId = e.PositionId,
+            RoleId = e.RoleId,
+            FirstName = e.FirstName,
+            LastName = e.LastName,
+            MiddleName = e.MiddleName,
+            HireDate = e.HireDate,
+            Email = e.Email,
+            AccumulatedVacationDays = e.AccumulatedVacationDays,
+            TotalAccumulatedVacationDays = e.TotalAccumulatedVacationDays,
+            IsMultipleChildren = e.IsMultipleChildren,
+            HasDisabledChild = e.HasDisabledChild,
+            IsVeteran = e.IsVeteran,
+            IsHonorDonor = e.IsHonorDonor,
+            Department = e.Department != null ? new DepartmentDto 
+            {
+                DepartmentId = e.Department.DepartmentId,
+                Name = e.Department.Name
+            } : null,
+            Position = e.Position != null ? new PositionDto 
+            {
+                PositionId = e.Position.PositionId,
+                Name = e.Position.Name
+            } : null,
+            Role = e.Role != null ? new RoleDto 
+            {
+                RoleId = e.Role.RoleId,
+                NameRole = e.Role.NameRole
+            } : null
+        })
+        .AsNoTracking()
+        .ToListAsync();
+}
 
         // GET: api/Employees/5
         [HttpGet("{id}")]
@@ -206,6 +246,41 @@ namespace VacationPlanner.Api.Controllers
                 return StatusCode(500, $"An error occurred: {ex.Message}");
             }
         }
+
+
+        [HttpGet("me")]
+public async Task<ActionResult<EmployeesDto>> GetMyProfile()
+{
+    var userIdClaim = User.FindFirst("EmployeeId");
+    if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int employeeId))
+    {
+        return Unauthorized();
+    }
+
+    var employee = await _context.Employees
+        .Include(e => e.Department)
+        .Include(e => e.Position)
+        .Include(e => e.Role)
+        .Select(e => new EmployeesDto
+        {
+            EmployeeId = e.EmployeeId,
+            FirstName = e.FirstName,
+            LastName = e.LastName,
+            MiddleName = e.MiddleName,
+            Email = e.Email,
+            HireDate = e.HireDate,
+            AccumulatedVacationDays = e.AccumulatedVacationDays,
+            TotalAccumulatedVacationDays = e.TotalAccumulatedVacationDays,
+            Department = e.Department != null ? new DepartmentDto { Name = e.Department.Name } : null,
+            Position = e.Position != null ? new PositionDto { Name = e.Position.Name } : null
+        })
+        .FirstOrDefaultAsync(e => e.EmployeeId == employeeId);
+
+    if (employee == null)
+        return NotFound();
+
+    return Ok(employee);
+}
 
         // Временный эндпоинт для исправления даты приема на работу
         [HttpPost("fix-hire-date")]
