@@ -105,9 +105,13 @@ builder.Services.AddDbContext<VacationPlannerDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"),
         sqlServerOptionsAction: sqlOptions =>
         {
-            sqlOptions.CommandTimeout(500); 
+            sqlOptions.EnableRetryOnFailure(
+                maxRetryCount: 5,
+                maxRetryDelay: TimeSpan.FromSeconds(30),
+                errorNumbersToAdd: null);
+            sqlOptions.CommandTimeout(500);
+            sqlOptions.MigrationsAssembly(typeof(VacationPlannerDbContext).Assembly.FullName);
         }));
-
     
 
 // Регистрация сервисов
@@ -140,42 +144,53 @@ app.MapControllers();
 // Инициализация базы данных
 using (var scope = app.Services.CreateScope())
 {
-    var context = scope.ServiceProvider.GetRequiredService<VacationPlannerDbContext>();
-    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+    var services = scope.ServiceProvider;
+    var context = services.GetRequiredService<VacationPlannerDbContext>();
+    var logger = services.GetRequiredService<ILogger<Program>>();
     
-    logger.LogInformation("Starting database initialization...");
-    
-    // Запуск сидеров
-    var vacationTypeSeeder = new VacationTypeSeeder(context);
-    vacationTypeSeeder.Seed();
-
-    var vacationStatusSeeder = new VacationStatusSeeder(context);
-    vacationStatusSeeder.Seed();
-
-    var organizationSeeder = new OrganizationSeeder(context);
-    organizationSeeder.Seed();
-
-    var departmentSeeder = new DepartmentSeeder(context);
-    departmentSeeder.Seed();
-
-    var positionSeeder = new PositionSeeder(context);
-    positionSeeder.Seed();
-
-    var roleSeeder = new RoleSeeder(context);
-    roleSeeder.Seed();
-
-    var employeeSeeder = new EmployeeSeeder(context);
-    employeeSeeder.Seed();
-
-    logger.LogInformation("Seeding completed. Starting vacation days update...");
-
-    // Обновляем дни отпуска при запуске
-    try 
+    try
     {
+        logger.LogInformation("Applying migrations and creating database...");
+        
+        // Применяем миграции и создаем базу данных, если ее нет
+        context.Database.Migrate();
+        
+        logger.LogInformation("Database migration completed successfully");
+        
+        // Запуск сидеров
+        logger.LogInformation("Starting database seeding...");
+        
+        var vacationTypeSeeder = new VacationTypeSeeder(context);
+        vacationTypeSeeder.Seed();
+
+        var vacationStatusSeeder = new VacationStatusSeeder(context);
+        vacationStatusSeeder.Seed();
+
+        var organizationSeeder = new OrganizationSeeder(context);
+        organizationSeeder.Seed();
+
+        var departmentSeeder = new DepartmentSeeder(context);
+        departmentSeeder.Seed();
+
+        var positionSeeder = new PositionSeeder(context);
+        positionSeeder.Seed();
+
+        var roleSeeder = new RoleSeeder(context);
+        roleSeeder.Seed();
+
+        var employeeSeeder = new EmployeeSeeder(context);
+        employeeSeeder.Seed();
+
+        logger.LogInformation("Database seeding completed successfully");
+        
+        // Обновляем дни отпуска при запуске
+        logger.LogInformation("Starting vacation days update...");
+        
         Console.WriteLine("\n=== ЗАПУСК ОБНОВЛЕНИЯ ДНЕЙ ОТПУСКА ПРИ СТАРТЕ ===");
-        var vacationDaysUpdateService = scope.ServiceProvider.GetRequiredService<VacationDaysUpdateService>();
+        var vacationDaysUpdateService = services.GetRequiredService<VacationDaysUpdateService>();
         await vacationDaysUpdateService.UpdateVacationDaysAsync(CancellationToken.None);
         Console.WriteLine("=== ОБНОВЛЕНИЕ ДНЕЙ ОТПУСКА ПРИ СТАРТЕ ЗАВЕРШЕНО ===\n");
+        
         logger.LogInformation("Vacation days update completed successfully");
     }
     catch (Exception ex)
