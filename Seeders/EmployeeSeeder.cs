@@ -181,7 +181,7 @@ public class EmployeeSeeder
              new Employee
             {
                 DepartmentId = 2,
-                PositionId = 5,   // Специалист по кадрам
+                PositionId = 5,  
                 RoleId = 2,
                 FirstName = "Иван",
                 LastName = "Иванов",

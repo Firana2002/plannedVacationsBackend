@@ -1,0 +1,179 @@
+@startuml
+skinparam classAttributeIconSize 0
+
+' Основные сущности
+class VacationPlannerDbContext {
+    +DbSet<AdditionalVacationDay> AdditionalVacationDays
+    +DbSet<Department> Departments
+    +DbSet<DepartmentRestriction> DepartmentRestrictions
+    +DbSet<Employee> Employees
+    +DbSet<EmployeeVacationDay> EmployeeVacationDays
+    +DbSet<Holiday> Holidays
+    +DbSet<Organization> Organizations
+    +DbSet<Role> Roles
+    +DbSet<PlannedVacation> PlannedVacations
+    +DbSet<PastVacations> PastVacations
+    +DbSet<Position> Positions
+    +DbSet<Restriction> Restrictions
+    +DbSet<VacationType> VacationTypes
+    +DbSet<VacationStatus> VacationStatuses
+    +DbSet<Notification> Notifications
+}
+
+' Классы
+class AdditionalVacationDay {
+    -int AdditionalVacationDaysId
+    -DateOnly StartDate
+    -DateOnly EndDate
+}
+
+class Department {
+    -int DepartmentId
+    -string Name
+    -int OrganizationId
+}
+
+class DepartmentRestriction {
+    -int DepartmentRestrictionId
+    -int DepartmentId
+    -int RestrictionId
+}
+
+class Employee {
+    -int EmployeeId
+    -string FullName
+    -DateTime BirthDate
+    -bool HasDisabledChild
+    -bool IsMultipleChildren
+    -bool IsVeteran
+    -bool IsHonorDonor
+    -int DepartmentId
+    -int PositionId
+    -int RoleId
+}
+
+class EmployeeVacationDay {
+    -int EmployeeVacationDaysId
+    -DateOnly StartDate
+    -DateOnly EndDate
+    -int EmployeeId
+    -int VacationTypeId
+}
+
+class Holiday {
+    -int HolidayId
+    -DateOnly Date
+    -string Name
+}
+
+class Organization {
+    -int OrganizationId
+    -string Name
+}
+
+class PlannedVacation {
+    -int PlannedVacationId
+    -DateOnly StartDate
+    -DateOnly EndDate
+    -string Comment
+    -int EmployeeId
+    -int VacationTypeId
+    -int StatusId
+}
+
+class Position {
+    -int PositionId
+    -string Name
+}
+
+class Restriction {
+    -int RestrictionId
+    -string Name
+    -string Description
+}
+
+class VacationType {
+    -int VacationTypeId
+    -string Name
+    -int DefaultDays
+}
+
+class VacationStatus {
+    -int VacationStatusId
+    -string Name
+}
+
+class Notification {
+    -int NotificationId
+    -string Message
+    -DateTime Date
+    -bool IsRead
+}
+
+class PastVacations {
+    -int PastVacationId
+    -DateOnly StartDate
+    -DateOnly EndDate
+    -int EmployeeId
+    -int VacationTypeId
+    -int StatusId
+}
+
+class Role {
+    -int RoleId
+    -string NameRole
+}
+
+' Связи
+VacationPlannerDbContext "1" -- "many" AdditionalVacationDay : содержит
+VacationPlannerDbContext "1" -- "many" Department : содержит
+VacationPlannerDbContext "1" -- "many" DepartmentRestriction : содержит
+VacationPlannerDbContext "1" -- "many" Employee : содержит
+VacationPlannerDbContext "1" -- "many" EmployeeVacationDay : содержит
+VacationPlannerDbContext "1" -- "many" Holiday : содержит
+VacationPlannerDbContext "1" -- "many" Organization : содержит
+VacationPlannerDbContext "1" -- "many" PlannedVacation : содержит
+VacationPlannerDbContext "1" -- "many" Position : содержит
+VacationPlannerDbContext "1" -- "many" Restriction : содержит
+VacationPlannerDbContext "1" -- "many" VacationType : содержит
+VacationPlannerDbContext "1" -- "many" VacationStatus : содержит
+VacationPlannerDbContext "1" -- "many" PastVacations : содержит
+VacationPlannerDbContext "1" -- "many" Notification : содержит
+VacationPlannerDbContext "1" -- "many" Role : содержит
+
+' Отношения между сущностями
+Employee "1" --> "many" EmployeeVacationDay : имеет
+Employee "1" --> "many" PlannedVacation : имеет
+Employee "1" --> "many" PastVacations : имеет
+Employee "1" --> "many" Notification : получает
+Employee "0..1" --> "1" Department : принадлежит
+Employee "0..1" --> "1" Position : занимает
+Employee "0..1" --> "1" Role : имеет роль
+
+Department "1" --> "many" Employee : сотрудники
+Department "1" --> "many" DepartmentRestriction : ограничения
+Department "0..1" --> "1" Organization : относится к
+
+DepartmentRestriction "1" --> "1" Restriction : тип ограничения
+
+EmployeeVacationDay "1" --> "1" VacationType : тип отпуска
+
+PlannedVacation "1" --> "1" VacationType : тип
+PlannedVacation "1" --> "1" VacationStatus : статус
+
+Organization "1" --> "many" Department : содержит
+
+VacationType "1" --> "many" EmployeeVacationDay : используется
+VacationType "1" --> "many" PlannedVacation : используется
+
+VacationStatus "1" --> "many" PlannedVacation : связано
+VacationStatus "1" --> "many" PastVacations : связано
+
+Role "1" --> "many" Employee : назначается
+
+PastVacations "1" --> "1" VacationType : тип
+PastVacations "1" --> "1" VacationStatus : статус
+
+Notification "1" --> "1" Employee : направлено
+
+@enduml
